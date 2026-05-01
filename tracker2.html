@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol Dashboard Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { 
+            --bg: #f1f5f9; 
+            --accent: #000000;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+        #ui-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 800px; margin-bottom: 30px; }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .field { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+        input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; width: 100%; }
+        
+        /* Fixed Responsive Habit Grid */
+        #habitGrid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            gap: 10px; 
+            margin-top: 5px; 
+            margin-bottom: 20px;
+        }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button { padding: 15px; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-gen { background: #000; color: #fff; }
+        .btn-save { background: #059669; color: #fff; display: none; }
+        
+        #preview-container { display: none; width: 100%; overflow-x: auto; padding: 20px; background: #cbd5e1; border-radius: 12px; }
+
+        .tracker-page {
+            width: 1122px; height: 794px; background: white; padding: 40px; margin: 0 auto;
+            display: flex; flex-direction: column; color: #000; position: relative;
+        }
+
+        .top-meta { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
+        .top-meta .left { font-weight: 800; font-size: 18px; }
+        .top-meta .center { font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: -1px; }
+        .top-meta .right { font-weight: 400; font-size: 13px; font-family: monospace; }
+
+        .thick-bar { height: 6px; background: #000; margin-bottom: 15px; }
+
+        .main-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2.5px solid #000; }
+        .main-table th, .main-table td { border: 1px solid #000; text-align: center; height: 28px; font-size: 11px; }
+
+        .col-label { width: 160px; text-align: left; padding-left: 10px; font-weight: 700; }
+        .row-header { background: #f8fafc; font-weight: 800; }
+        .score-row { background: #fff; font-weight: 800; }
+        
+        .sleep-header { background: #000; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 4px; font-size: 10px; height: 24px; }
+        .weekend { background: #e8e9eb !important; }
+
+        .notes-section { border: 1px solid #000; border-top: none; height: 60px; padding: 12px; font-size: 12px; color: #444; }
+        .footer { margin-top: auto; display: flex; justify-content: space-between; font-size: 11px; padding-top: 15px; border-top: 1px solid #eee; }
+
+        /* Request: Aryan Singh Footer */
+        .copyright-footer {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 768px) { 
+            .input-row { grid-template-columns: 1fr; } 
+            #habitGrid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-panel">
+        <h2 style="margin:0 0 20px 0; letter-spacing:-1px">Protocol Dashboard</h2>
+        
+        <div class="input-row">
+            <div class="field"><label>Month</label><select id="monthSelect"></select></div>
+            <div class="field"><label>Year</label><input type="number" id="yearInput"></div>
+        </div>
+
+        <div class="input-row">
+            <div class="field"><label>User Name</label><input type="text" id="nameInput" placeholder="Your Name"></div>
+            <div class="field"><label>Primary Slogan</label><input type="text" id="sloganInput" placeholder="DISCIPLINE IS REAL FREEDOM"></div>
+        </div>
+
+        <div class="field" style="margin-bottom:15px">
+            <label>Custom Quote (Optional)</label>
+            <input type="text" id="quoteInput" placeholder="Leave blank for random Stoic quote">
+        </div>
+
+        <label>Daily Protocols (11 Slots + Auto Score)</label>
+        <div id="habitGrid"></div>
+
+        <div class="btn-group">
+            <button class="btn-gen" onclick="generate()">PREVIEW TRACKER</button>
+            <button id="saveBtn" class="btn-save" onclick="saveAsImage()">DOWNLOAD IMAGE</button>
+        </div>
+
+        <div class="copyright-footer">By Aryan Singh 2026©</div>
+    </div>
+
+    <div id="preview-container">
+        <div id="capture-area">
+            <div id="tracker-output" class="tracker-page"></div>
+        </div>
+    </div>
+
+    <script>
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        const stoicQuotes = [
+            { text: "You have power over your mind - not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+            { text: "Waste no more time arguing what a good man should be. Be one.", author: "Marcus Aurelius" },
+            { text: "Difficulties strengthen the mind, as labor does the body.", author: "Seneca" },
+            { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+            { text: "First say to yourself what you would be; and then do what you have to do.", author: "Epictetus" },
+            { text: "The best revenge is to be unlike him who performed the injury.", author: "Marcus Aurelius" }
+        ];
+        
+        const today = new Date();
+        const mSelect = document.getElementById('monthSelect');
+        monthNames.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i; opt.textContent = m;
+            opt.selected = i === today.getMonth();
+            mSelect.appendChild(opt);
+        });
+        document.getElementById('yearInput').value = today.getFullYear();
+
+        const grid = document.getElementById('habitGrid');
+        for(let i=0; i<11; i++) {
+            grid.innerHTML += `<input type="text" class="h-in" placeholder="Protocol ${i+1}">`;
+        }
+
+        function generate() {
+            const month = parseInt(document.getElementById('monthSelect').value);
+            const year = parseInt(document.getElementById('yearInput').value);
+            const name = document.getElementById('nameInput').value || "User";
+            const slogan = document.getElementById('sloganInput').value || "DISCIPLINE IS REAL FREEDOM";
+            const habits = Array.from(document.querySelectorAll('.h-in')).map(i => i.value.trim());
+            
+            let finalQuote = "";
+            const customQ = document.getElementById('quoteInput').value.trim();
+            if(customQ) {
+                finalQuote = `"${customQ}"`;
+            } else {
+                const randomQ = stoicQuotes[Math.floor(Math.random() * stoicQuotes.length)];
+                finalQuote = `"${randomQ.text}" — ${randomQ.author}`;
+            }
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const days = [];
+            for(let d=1; d<=daysInMonth; d++) {
+                const date = new Date(year, month, d);
+                const dayName = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][date.getDay()];
+                days.push({ num: d, name: dayName, isWknd: (date.getDay() === 0 || date.getDay() === 6) });
+            }
+
+            let tableHtml = `
+                <div class="top-meta">
+                    <div class="left">${name}'s Protocol</div>
+                    <div class="center">${slogan}</div>
+                    <div class="right">${daysInMonth} DAYS</div>
+                </div>
+                <div class="thick-bar"></div>
+                <table class="main-table">
+                    <thead>
+                        <tr class="row-header">
+                            <td class="col-label">Protocols</td>
+                            ${days.map(d => `<td class="${d.isWknd?'weekend':''}">${d.num}</td>`).join('')}
+                        </tr>
+                        <tr style="font-size: 9px; height:18px">
+                            <td class="col-label"></td>
+                            ${days.map(d => `<td class="${d.isWknd?'weekend':''}">${d.name}</td>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            for(let i=0; i<11; i++) {
+                const habitName = habits[i] || ""; 
+                tableHtml += `<tr><td class="col-label">${habitName}</td>`;
+                days.forEach(d => tableHtml += `<td class="${d.isWknd?'weekend':''}"></td>`);
+                tableHtml += `</tr>`;
+            }
+
+            tableHtml += `<tr class="score-row"><td class="col-label">Daily Score</td>`;
+            days.forEach(d => tableHtml += `<td class="${d.isWknd?'weekend':''}"></td>`);
+            tableHtml += `</tr>`;
+
+            tableHtml += `<tr><td colspan="${daysInMonth+1}" class="sleep-header">Sleep Tracking</td></tr>`;
+            ["8hrs+", "7hrs+", "6hrs+", "5hrs+", "< 5hrs"].forEach(s => {
+                tableHtml += `<tr><td class="col-label">${s}</td>`;
+                days.forEach(d => tableHtml += `<td class="${d.isWknd?'weekend':''}"></td>`);
+                tableHtml += `</tr>`;
+            });
+
+            tableHtml += `</tbody></table>
+                <div class="notes-section">Notes:</div>
+                <div class="footer">
+                    <strong>${monthNames[month]} ${year}</strong>
+                    <span><em>${finalQuote}</em></span>
+                </div>`;
+
+            document.getElementById('tracker-output').innerHTML = tableHtml;
+            document.getElementById('preview-container').style.display = 'block';
+            document.getElementById('saveBtn').style.display = 'block';
+            window.scrollTo({ top: document.getElementById('preview-container').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        async function saveAsImage() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerText = "Exporting...";
+            saveBtn.disabled = true;
+            try {
+                const element = document.getElementById('capture-area');
+                const canvas = await html2canvas(element, {
+                    scale: 3, 
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    width: 1122, height: 794,
+                    scrollX: 0, scrollY: 0, x: 0, y: 0
+                });
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.download = `Protocol-Dashboard-${monthNames[document.getElementById('monthSelect').value]}.png`;
+                link.href = image;
+                link.click();
+            } catch (error) {
+                alert("Export failed.");
+            } finally {
+                saveBtn.innerText = "DOWNLOAD IMAGE";
+                saveBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
